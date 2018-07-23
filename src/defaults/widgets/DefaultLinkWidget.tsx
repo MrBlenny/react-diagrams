@@ -22,6 +22,18 @@ export interface DefaultLinkState {
 	selected: boolean;
 }
 
+const findReactComponent = (dom: Element) => {
+	for (var key in dom) {
+		if (key.startsWith("__reactInternalInstance$")) {
+			const compInternals = dom[key]._currentElement;
+			const compWrapper = compInternals._owner;
+			const comp = compWrapper._instance;
+			return comp;
+		}
+	}
+	return null;
+};
+
 export class DefaultLinkWidget extends BaseWidget<DefaultLinkProps, DefaultLinkState> {
 	public static defaultProps: DefaultLinkProps = {
 		color: "black",
@@ -152,13 +164,27 @@ export class DefaultLinkWidget extends BaseWidget<DefaultLinkProps, DefaultLinkS
 			}
 		);
 
+		const setPortSelected = (portType: "sourcePort" | "targetPort", selectedState: boolean) => {
+			if (this.props.link[portType] && this.props.link[portType].id) {
+				const portEl = this.props.diagramEngine.canvas.querySelector(`[data-portid='${this.props.link[portType].id}']`);
+				const reactComponent = findReactComponent(portEl)
+				if (reactComponent) {
+					reactComponent.setState({ selected: selectedState })
+				}
+			}
+		}
+
 		var Top = React.cloneElement(Bottom, {
 			...extraProps,
 			strokeLinecap: "round",
 			onMouseLeave: () => {
+				setPortSelected("sourcePort", false)
+				setPortSelected("targetPort", false)
 				this.setState({ selected: false });
 			},
 			onMouseEnter: () => {
+				setPortSelected("sourcePort", true)
+				setPortSelected("targetPort", true)
 				this.setState({ selected: true });
 			},
 			ref: null,
